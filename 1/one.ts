@@ -1,4 +1,4 @@
-import { INPUT } from "./INPUT";
+import { INPUT1 } from "./INPUT-1";
 
 const DIGITS = {
   one: "1",
@@ -14,7 +14,7 @@ const DIGITS = {
 type Digit = keyof typeof DIGITS;
 
 const main = () =>
-  INPUT.trim()
+  INPUT1.trim()
     .split("\n")
     .map((line) =>
       line.replaceAll(

@@ -1,4 +1,4 @@
-export const INPUT = `
+export const INPUT1 = `
 four9one
 bbzhsmnmtf8kftwosevenxfkssgrcjthree
 6pkkcddsixsixjgnjvdtjtwo
