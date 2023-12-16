@@ -28,48 +28,48 @@ const main = (expansionFactor: number) => {
   }
 
   let total = 0;
-
-  function getRowDist(gal: [number, number], gal2: [number, number]) {
-    const start = Math.min(gal[0], gal2[0]);
-    const end = Math.max(gal[0], gal2[0]);
-    let dist = 0;
-    for (let i = start; i < end; i++) {
-      if (rowsWithGalaxies.has(i)) {
-        dist += 1;
-      } else {
-        dist += expansionFactor;
-      }
-    }
-
-    return dist;
-  }
-
-  function getColDist(gal: [number, number], gal2: [number, number]) {
-    const start = Math.min(gal[1], gal2[1]);
-    const end = Math.max(gal[1], gal2[1]);
-    let dist = 0;
-    for (let i = start; i < end; i++) {
-      if (colsWithGalaxies.has(i)) {
-        dist += 1;
-      } else {
-        dist += expansionFactor;
-      }
-    }
-
-    return dist;
-  }
-
+  const rowOrColWithGalaxies = [rowsWithGalaxies, colsWithGalaxies] as const;
   for (let gal of galaxies) {
     for (const gal2 of galaxies) {
-      const rowDist = getRowDist(gal, gal2);
-      const colDist = getColDist(gal, gal2);
-      const distance = rowDist + colDist;
-
-      total += distance;
+      const colDist = computeDist("col")(
+        gal,
+        gal2,
+        rowOrColWithGalaxies,
+        expansionFactor,
+      );
+      const rowDist = computeDist("row")(
+        gal,
+        gal2,
+        rowOrColWithGalaxies,
+        expansionFactor,
+      );
+      total += rowDist + colDist;
     }
   }
 
   return total / 2;
 };
+
+const computeDist =
+  (rowOrCol: "row" | "col") =>
+  (
+    gal: [number, number],
+    gal2: [number, number],
+    rowOrColWithGalaxies: Readonly<[Set<any>, Set<any>]>,
+    expansionFactor: number,
+  ) => {
+    const index = rowOrCol === "row" ? 0 : 1;
+    const start = Math.min(gal[index], gal2[index]);
+    const end = Math.max(gal[index], gal2[index]);
+    let dist = 0;
+    for (let i = start; i < end; i++) {
+      if (rowOrColWithGalaxies[index].has(i)) {
+        dist += 1;
+      } else {
+        dist += expansionFactor;
+      }
+    }
+    return dist;
+  };
 
 console.dir({ p1: main(2), p2: main(1000000) });
