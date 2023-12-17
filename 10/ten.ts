@@ -1,15 +1,19 @@
-import { input10 } from "./input10";
+import { input10, testInput10 } from "./input10";
 
 type Pipe = "F" | "L" | "J" | "7" | "|" | "-";
 type Field = Pipe | "." | "S";
 type Flow = "up" | "down" | "left" | "right";
 
 const S = "|";
+// const S = "7";
 
-const MAP: Field[][] = input10
-  .trim()
-  .split("\n")
-  .map((row) => row.trim().split("") as Field[]);
+const getMap = (input: string) =>
+  input
+    .trim()
+    .split("\n")
+    .map((row) => row.trim().split("") as Field[]);
+
+const MAP: Field[][] = getMap(input10);
 
 const hashedMap: Record<
   string,
@@ -36,10 +40,11 @@ for (let i = 0; i < MAP.length; i++) {
         };
         break;
       }
-      case "|":
-      case "S": {
+      case "S":
+      case "|": {
         hashedMap[key] = {
           pipe: field === "S" ? S : field,
+          // pipe: field,
           previous: asKey(i - 1, j),
           next: asKey(i + 1, j),
         };
@@ -61,6 +66,7 @@ for (let i = 0; i < MAP.length; i++) {
         };
         break;
       }
+      // case "S":
       case "7": {
         hashedMap[key] = {
           pipe: field,
@@ -131,9 +137,9 @@ const getLoop = () => {
   let current = hashedMap[startingKey].previous;
   let currentFlow = getFlow(lastFlow, hashedMap[current].pipe);
 
-  const loopMap: Record<string, Flow> = {
-    [last]: lastFlow,
-    [current]: currentFlow,
+  const loopMap: Record<string, { flow: Flow; pipe: Pipe }> = {
+    [last]: { flow: lastFlow, pipe: hashedMap[startingKey].pipe },
+    [current]: { flow: currentFlow, pipe: hashedMap[current].pipe },
   };
 
   while (current !== startingKey) {
@@ -144,7 +150,7 @@ const getLoop = () => {
     last = current;
     current = next;
     currentFlow = getFlow(currentFlow, hashedMap[next].pipe);
-    loopMap[next] = currentFlow;
+    loopMap[next] = { flow: currentFlow, pipe: hashedMap[next].pipe };
   }
   return loopMap;
 };
@@ -163,7 +169,8 @@ const getInnerArea = () => {
   const handledKeys = new Set<string>();
   let area = 0;
   LoopList.forEach((key) => {
-    const currentFlow = LOOP[key];
+    const currentFlow = LOOP[key].flow;
+    const currentPipe = LOOP[key].pipe;
 
     if (handledKeys.has(key)) return;
     handledKeys.add(key);
@@ -177,7 +184,10 @@ const getInnerArea = () => {
       }
       handledKeys.add(asKey(i, j));
     }
-    if (currentFlow === "up") {
+    if (
+      currentFlow === "up" ||
+      (currentFlow === "right" && currentPipe === "F")
+    ) {
       let [i, j] = parseKey(key);
       j--;
       while (!LOOP[asKey(i, j)]) {
@@ -187,7 +197,6 @@ const getInnerArea = () => {
       handledKeys.add(asKey(i, j));
     }
   });
-  console.log(handledKeys.size / 2);
   return area;
 };
 
