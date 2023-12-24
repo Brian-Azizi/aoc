@@ -41,3 +41,19 @@ export function isEqual(x: any[], y: any[]): boolean {
   }
   return true;
 }
+
+export function transpose(x: string[]): string[] {
+  const N = x.length;
+  const M = x[0].length;
+  const result: string[] = [];
+  for (let i = 0; i < M; i++) {
+    result.push("");
+  }
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < M; j++) {
+      result[j] += x[i][j];
+    }
+  }
+
+  return result;
+}
