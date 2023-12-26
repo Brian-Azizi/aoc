@@ -1,5 +1,6 @@
 import { test14, input14 } from "./input_14";
 import { memoize, sum } from "../utils";
+import * as fs from "fs";
 
 const INPUT = input14.trim().split("\n");
 
@@ -113,7 +114,7 @@ console.log(rotateClockwise(INPUT).join("\n"));
 
 console.log(part1);
 
-const CYCLES = 10000;
+const CYCLES = 1;
 // const CYCLES = 1000000000;
 const part2 = () => {
   let north: d = "U";
@@ -126,19 +127,33 @@ const part2 = () => {
     for (let j = 0; j < 4; j++) {
       plane = tiltLeft(plane);
       const load = getTotalLoad(plane, north);
-      if (north === "D") console.log([i, north, load]);
+      if (north === "D") {
+        console.log([i, north, load]);
+        results.push(load);
+      }
 
-      if (north === "D" && i > 99) results.push(load);
-
+      // if (north === "D" && i > 1000) results.push(load);
+      // if (load === 88666) console.log(i);
       plane = rotateClockwise(plane);
       north = DIR[j];
     }
   }
 
   console.log(Math.min(...results));
-  console.dir(results, { depth: null });
+  console.dir(JSON.stringify(results), { depth: null });
 };
 part2();
 
 const seq = [69, 69, 65, 64, 65, 63, 68];
 console.log(seq[(1000000000 - 3) % seq.length]);
+
+// const x =
+
+const part2Seq = [
+  88666, 88680, 88683, 88711, 88744, 88765, 88767, 88772, 88768, 88755, 88742,
+  88717, 88697, 88674, 88672, 88673, 88684, 88717, 88737, 88766, 88773, 88765,
+  88769, 88761, 88735, 88718, 88703, 88667, 88673, 88679, 88677, 88718, 88743,
+  88759, 88774, 88771, 88762, 88762, 88741, 88711, 88704, 88673,
+];
+
+console.log(part2Seq[(1000000000 - 201) % part2Seq.length]);
