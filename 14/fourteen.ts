@@ -13,7 +13,7 @@ export function rotateClockwise(x: string[]): string[] {
   for (let i = N - 1; i >= 0; i--) {
     for (let j = 0; j < M; j++) {
       // result[M - j - 1] += x[i][j];
-      result[i] += x[i][j];
+      result[j] += x[i][j];
     }
   }
 
@@ -27,7 +27,7 @@ const rotateAntiClockwise = (x: string[]): string[] => {
   for (let i = 0; i < M; i++) {
     result.push("");
   }
-  for (let i = N - 1; i >= 0; i--) {
+  for (let i = 0; i < N; i++) {
     for (let j = 0; j < M; j++) {
       result[M - j - 1] += x[i][j];
     }
@@ -113,23 +113,31 @@ console.log(rotateClockwise(INPUT).join("\n"));
 
 console.log(part1);
 
+const CYCLES = 1000;
+// const CYCLES = 1000000000;
 const part2 = () => {
-  const CYCLES = 10;
-  // const CYCLES = 1000000000;
   let north: d = "U";
   let plane = rotateAntiClockwise(INPUT);
   north = "L";
+
+  const results: number[] = [];
 
   for (let i = 0; i < CYCLES; i++) {
     for (let j = 0; j < 4; j++) {
       plane = tiltLeft(plane);
       const load = getTotalLoad(plane, north);
-      console.log([i, north, load]);
+      if (north === "D") console.log([i, north, load]);
+
+      if (north === "D" && i > 99) results.push(load);
 
       plane = rotateClockwise(plane);
       north = DIR[j];
     }
   }
-};
 
+  console.log(sum(results) / results.length);
+};
 part2();
+
+const seq = [69, 69, 65, 64, 65, 63, 68];
+console.log(seq[(1000000000 - 2) % seq.length]);
