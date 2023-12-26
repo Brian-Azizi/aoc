@@ -1,5 +1,5 @@
-import { input16, test16 } from "./input16";
-import { sum } from "../utils";
+import { input16 } from "./input16";
+import { getDimensions, sum } from "../utils";
 
 // const INPUT = test16;
 const INPUT = input16;
@@ -33,7 +33,7 @@ const makeGrid = (input: string): Grid => {
   return GRID;
 };
 
-const getNextRay = ({ i, j, direction }: Ray) => {
+export const getNextRay = ({ i, j, direction }: Ray) => {
   switch (direction) {
     case ">":
       return { i, j: j + 1, direction };
@@ -52,11 +52,6 @@ const NEXT_DIRECTIONS: Record<Cell, Record<Direction, Direction[]>> = {
   "\\": { "^": ["<"], ">": ["v"], v: [">"], "<": ["^"] },
   "-": { "^": ["<", ">"], ">": [">"], v: ["<", ">"], "<": ["<"] },
   "|": { "^": ["^"], ">": ["^", "v"], v: ["v"], "<": ["^", "v"] },
-};
-
-const getDimensions = (input: string): [number, number] => {
-  const rows = input.trim().split("\n");
-  return [rows.length, rows[0].length];
 };
 
 const followRay = (grid: Grid) => (ray: Ray) => {

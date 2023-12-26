@@ -57,3 +57,11 @@ export function transpose(x: string[]): string[] {
 
   return result;
 }
+
+export const getDimensions = (input: string | any[][]): [number, number] => {
+  if (typeof input === "string") {
+    const rows = input.trim().split("\n");
+    return [rows.length, rows[0].length];
+  }
+  return [input.length, input[0].length];
+};
