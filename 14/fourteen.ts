@@ -1,7 +1,7 @@
 import { test14, input14 } from "./input_14";
 import { memoize, sum } from "../utils";
 
-const INPUT = test14.trim().split("\n");
+const INPUT = input14.trim().split("\n");
 
 export function rotateClockwise(x: string[]): string[] {
   const N = x.length;
@@ -113,7 +113,7 @@ console.log(rotateClockwise(INPUT).join("\n"));
 
 console.log(part1);
 
-const CYCLES = 1000;
+const CYCLES = 10000;
 // const CYCLES = 1000000000;
 const part2 = () => {
   let north: d = "U";
@@ -135,9 +135,10 @@ const part2 = () => {
     }
   }
 
-  console.log(sum(results) / results.length);
+  console.log(Math.min(...results));
+  console.dir(results, { depth: null });
 };
 part2();
 
 const seq = [69, 69, 65, 64, 65, 63, 68];
-console.log(seq[(1000000000 - 2) % seq.length]);
+console.log(seq[(1000000000 - 3) % seq.length]);
