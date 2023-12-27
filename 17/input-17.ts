@@ -14,6 +14,13 @@ export const test17 = `
 4322674655533
 `;
 
+export const medium17 = `
+6453
+5563
+7735
+5533
+`;
+
 export const small17 = `
 563
 735

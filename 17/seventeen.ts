@@ -1,45 +1,46 @@
-import { input17, small17, test17 } from "./input-17";
-import { getDimensions, toInt } from "../utils";
+import { input17, medium17, small17, test17 } from "./input-17";
+import { getDimensions, sum, toInt, transpose } from "../utils";
+import * as child_process from "child_process";
 
 // const INPUT = input17
 const INPUT = test17;
 // const INPUT = small17;
+// const INPUT = medium17;
 
 export type Direction = "^" | ">" | "v" | "<";
 type Hist = {
   directions: Direction[];
   positions: [number, number][];
+  costs: number[];
 };
 type Cell = {
   cost: number;
   i: number;
   j: number;
 };
-type Grid = Cell[][];
+type Grid = number[][];
 
 const GRID: Grid = INPUT.trim()
   .split("\n")
-  .map((row, i) =>
+  .map((row) =>
     row
       .trim()
       .split("")
-      .map((cost, j) => ({ cost: toInt(cost), i, j })),
+      .map((cost) => toInt(cost)),
   );
 const [N, M] = getDimensions(GRID);
-
-const part1 = () => {};
-
+const FORBIDDEN_MOVE: Record<Direction, Direction> = {
+  "^": "v",
+  ">": "<",
+  v: "^",
+  "<": ">",
+};
 export const isValid = (hist: Direction[]) => {
   const MAX_SEQ = 3;
   let seq = 1;
-  const forbidden: Record<Direction, Direction> = {
-    "^": "v",
-    ">": "<",
-    v: "^",
-    "<": ">",
-  };
+
   for (let i = 1; i < hist.length; i++) {
-    if (hist[i] === forbidden[hist[i - 1]]) return false;
+    if (hist[i] === FORBIDDEN_MOVE[hist[i - 1]]) return false;
     if (hist[i] === hist[i - 1]) seq++;
     else seq = 1;
     if (seq > MAX_SEQ) return false;
@@ -55,46 +56,157 @@ function isOob(i: number, j: number) {
   return i < 0 || j < 0 || i >= N || j >= M;
 }
 
-const VISITS: Record<string, boolean> = {};
+export const getHistKey =
+  (simple: boolean) =>
+  (hist: Direction[]): string => {
+    const l = hist.length;
+    const lastMove = hist[l - 1];
+    if (!lastMove) return "*";
+    const b = hist[l - 2];
+    const bb = hist[l - 3];
+    const bbb = hist[l - 4];
+    const bbbb = hist[l - 5];
 
-export const getHistKey = (hist: Direction[]): string => {
-  const l = hist.length;
-  const lastMove = hist[l - 1];
-  if (!lastMove) return "*";
-  if (lastMove !== hist[l - 2]) return lastMove;
-  else if (lastMove !== hist[l - 3]) return lastMove + lastMove;
-  else if (lastMove !== hist[l - 4]) return lastMove + lastMove + lastMove;
-  else {
-    throw new Error("histkey");
-  }
-};
-const hasVisited = (i: number, j: number, hist: Direction[]): boolean => {
-  return VISITS[`${i}-${j}-${getHistKey(hist)}`];
-};
-const visit = (i: number, j: number, hist: Direction[]): void => {
-  VISITS[`${i}-${j}-${getHistKey(hist)}`] = true;
-};
+    if (lastMove !== b) {
+      if (simple || lastMove !== FORBIDDEN_MOVE[bb]) return lastMove;
+      else return bb + lastMove;
+    } else if (lastMove !== bb) {
+      if (simple || lastMove !== FORBIDDEN_MOVE[bbb])
+        return lastMove + lastMove;
+      else return bbb + lastMove + lastMove;
+    } else if (lastMove !== bbb) {
+      if (simple || lastMove !== FORBIDDEN_MOVE[bbbb])
+        return lastMove + lastMove + lastMove;
+      else return bbbb + lastMove + lastMove + lastMove;
+    } else {
+      throw new Error("histkey");
+    }
+  };
+const getCacheKey =
+  (advanced: boolean) =>
+  (i: number, j: number, hist: Direction[]): string => {
+    return `${i}-${j}-${getHistKey(advanced)(hist)}`;
+  };
+const hasVisited =
+  (visits: Record<string, boolean>) =>
+  (i: number, j: number, hist: Direction[]): boolean => {
+    return visits[getCacheKey(true)(i, j, hist)];
+  };
+const visit =
+  (visits: Record<string, boolean>) =>
+  (i: number, j: number, hist: Direction[]): void => {
+    visits[getCacheKey(true)(i, j, hist)] = true;
+  };
+let COUNT = 0;
+const CACHE: Record<string, number> = {};
+const computeCost = (
+  i: number,
+  j: number,
+  hist: Readonly<Hist>,
+  visits: Record<string, boolean>,
+): number => {
+  COUNT++;
+  if (COUNT === 90) throw new Error();
 
-const computeCost = (i: number, j: number, hist: Direction[]): number => {
-  if (!isValid(hist)) return Infinity;
+  const { directions, positions, costs } = hist;
+
+  if (!isValid(directions)) return Infinity;
   if (isOob(i, j)) return Infinity;
 
-  if (hasVisited(i, j, hist)) return Infinity;
+  if (hasVisited(visits)(i, j, directions)) return Infinity;
+  visit(visits)(i, j, directions);
 
-  visit(i, j, hist);
+  if (CACHE[getCacheKey(false)(i, j, directions)]) {
+    return CACHE[getCacheKey(false)(i, j, directions)];
+  }
+  console.log([i, j, visits]);
 
-  const cost = GRID[i][j].cost;
-  if (isEnd(i, j)) return cost;
+  const cost = GRID[i][j];
+  if (isEnd(i, j)) {
+    renderHist(hist);
+    return cost;
+  }
 
-  const up = cost + computeCost(i - 1, j, [...hist, "^"]);
-  const right = cost + computeCost(i, j + 1, [...hist, ">"]);
-  const down = cost + computeCost(i + 1, j, [...hist, "v"]);
-  const left = cost + computeCost(i, j - 1, [...hist, "<"]);
+  const right =
+    cost +
+    computeCost(
+      i,
+      j + 1,
+      {
+        directions: [...directions, ">"],
+        positions: [...positions, [i, j + 1]],
+        costs: [...costs, cost],
+      },
+      { ...visits },
+    );
 
-  // console.log({ pos: [i, j], hist: hist.join(""), up, right, down, left });
+  const down =
+    cost +
+    computeCost(
+      i + 1,
+      j,
+      {
+        directions: [...directions, "v"],
+        positions: [...positions, [i + 1, j]],
+        costs: [...costs, cost],
+      },
+      { ...visits },
+    );
+  const left =
+    cost +
+    computeCost(
+      i,
+      j - 1,
+      {
+        directions: [...directions, "<"],
+        positions: [...positions, [i, j - 1]],
+        costs: [...costs, cost],
+      },
+      { ...visits },
+    );
 
-  return Math.min(up, right, down, left);
+  const up =
+    cost +
+    computeCost(
+      i - 1,
+      j,
+      {
+        directions: [...directions, "^"],
+        positions: [...positions, [i - 1, j]],
+        costs: [...costs, cost],
+      },
+      { ...visits },
+    );
+
+  const result = Math.min(up, right, down, left);
+  CACHE[getCacheKey(false)(i, j, directions)] = result;
+  console.log([i, j], CACHE);
+  return result;
+};
+
+const renderHist = (hist: Hist) => {
+  const map = INPUT.trim()
+    .split("\n")
+    .map((row) =>
+      row
+        .trim()
+        .split("")
+        .map((cost) => cost),
+    );
+
+  hist.positions.forEach((p, i) => {
+    // if (i === 0) return;
+    map[p[0]][p[1]] += hist.directions[i] ?? "";
+  });
+
+  console.log("\n");
+  console.log(
+    map.map((s) => s.map((g) => g.padEnd(6, " ")).join("")).join("\n"),
+  );
+  console.log(sum(hist.costs));
 };
 
 console.log(INPUT);
-console.log(computeCost(0, 0, []));
+console.log(
+  computeCost(0, 0, { directions: [], costs: [], positions: [[0, 0]] }, {}),
+);
