@@ -1,6 +1,5 @@
 import { input17, medium17, small17, test17 } from "./input-17";
 import { getDimensions, sum, toInt, transpose } from "../utils";
-import * as child_process from "child_process";
 
 // const INPUT = input17
 const INPUT = test17;
@@ -8,18 +7,8 @@ const INPUT = test17;
 // const INPUT = medium17;
 
 export type Direction = "^" | ">" | "v" | "<";
-type Hist = {
-  directions: Direction[];
-  positions: [number, number][];
-  costs: number[];
-};
-type Cell = {
-  cost: number;
-  i: number;
-  j: number;
-};
-type Grid = number[][];
 
+type Grid = number[][];
 const GRID: Grid = INPUT.trim()
   .split("\n")
   .map((row) =>
@@ -35,22 +24,19 @@ const FORBIDDEN_MOVE: Record<Direction, Direction> = {
   v: "^",
   "<": ">",
 };
-export const isValid = (hist: Direction[]) => {
+export const isValid = (hist: string) => {
+  const historyArray = hist.split("") as Direction[];
   const MAX_SEQ = 3;
   let seq = 1;
 
-  for (let i = 1; i < hist.length; i++) {
-    if (hist[i] === FORBIDDEN_MOVE[hist[i - 1]]) return false;
-    if (hist[i] === hist[i - 1]) seq++;
+  for (let i = 1; i < historyArray.length; i++) {
+    if (historyArray[i] === FORBIDDEN_MOVE[historyArray[i - 1]]) return false;
+    if (historyArray[i] === historyArray[i - 1]) seq++;
     else seq = 1;
     if (seq > MAX_SEQ) return false;
   }
   return true;
 };
-
-function isEnd(i: number, j: number) {
-  return i === N - 1 && j === M - 1;
-}
 
 function isOob(i: number, j: number) {
   return i < 0 || j < 0 || i >= N || j >= M;
@@ -82,131 +68,77 @@ export const getHistKey =
       throw new Error("histkey");
     }
   };
-const getCacheKey =
-  (advanced: boolean) =>
-  (i: number, j: number, hist: Direction[]): string => {
-    return `${i}-${j}-${getHistKey(advanced)(hist)}`;
-  };
-const hasVisited =
-  (visits: Record<string, boolean>) =>
-  (i: number, j: number, hist: Direction[]): boolean => {
-    return visits[getCacheKey(true)(i, j, hist)];
-  };
-const visit =
-  (visits: Record<string, boolean>) =>
-  (i: number, j: number, hist: Direction[]): void => {
-    visits[getCacheKey(true)(i, j, hist)] = true;
-  };
-let COUNT = 0;
-const CACHE: Record<string, number> = {};
-const computeCost = (
-  i: number,
-  j: number,
-  hist: Readonly<Hist>,
-  visits: Record<string, boolean>,
-): number => {
-  COUNT++;
-  if (COUNT === 90) throw new Error();
 
-  const { directions, positions, costs } = hist;
-
-  if (!isValid(directions)) return Infinity;
-  if (isOob(i, j)) return Infinity;
-
-  if (hasVisited(visits)(i, j, directions)) return Infinity;
-  visit(visits)(i, j, directions);
-
-  if (CACHE[getCacheKey(false)(i, j, directions)]) {
-    return CACHE[getCacheKey(false)(i, j, directions)];
-  }
-  console.log([i, j, visits]);
-
-  const cost = GRID[i][j];
-  if (isEnd(i, j)) {
-    renderHist(hist);
-    return cost;
-  }
-
-  const right =
-    cost +
-    computeCost(
-      i,
-      j + 1,
-      {
-        directions: [...directions, ">"],
-        positions: [...positions, [i, j + 1]],
-        costs: [...costs, cost],
-      },
-      { ...visits },
-    );
-
-  const down =
-    cost +
-    computeCost(
-      i + 1,
-      j,
-      {
-        directions: [...directions, "v"],
-        positions: [...positions, [i + 1, j]],
-        costs: [...costs, cost],
-      },
-      { ...visits },
-    );
-  const left =
-    cost +
-    computeCost(
-      i,
-      j - 1,
-      {
-        directions: [...directions, "<"],
-        positions: [...positions, [i, j - 1]],
-        costs: [...costs, cost],
-      },
-      { ...visits },
-    );
-
-  const up =
-    cost +
-    computeCost(
-      i - 1,
-      j,
-      {
-        directions: [...directions, "^"],
-        positions: [...positions, [i - 1, j]],
-        costs: [...costs, cost],
-      },
-      { ...visits },
-    );
-
-  const result = Math.min(up, right, down, left);
-  CACHE[getCacheKey(false)(i, j, directions)] = result;
-  console.log([i, j], CACHE);
-  return result;
-};
-
-const renderHist = (hist: Hist) => {
-  const map = INPUT.trim()
+const part1 = () => {
+  const grid = INPUT.trim()
     .split("\n")
     .map((row) =>
       row
         .trim()
         .split("")
-        .map((cost) => cost),
+        .map((cost) => ({
+          cost: toInt(cost),
+          distance: Infinity,
+          visited: false,
+          history: "",
+        })),
     );
 
-  hist.positions.forEach((p, i) => {
-    // if (i === 0) return;
-    map[p[0]][p[1]] += hist.directions[i] ?? "";
-  });
+  grid[0][0].distance = grid[0][0].cost;
+  grid[0][0].visited = true;
+  let done = false;
 
-  console.log("\n");
-  console.log(
-    map.map((s) => s.map((g) => g.padEnd(6, " ")).join("")).join("\n"),
-  );
-  console.log(sum(hist.costs));
+  while (!done) {
+    done = true;
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < M; j++) {
+        const node = grid[i][j];
+        node.visited = true;
+
+        if (!isOob(i, j + 1) && isValid(node.history + ">")) {
+          const right = node.distance + grid[i][j + 1].cost;
+          const current = grid[i][j + 1].distance;
+          if (right < current) {
+            grid[i][j + 1].distance = Math.min(grid[i][j + 1].distance, right);
+            grid[i][j + 1].history = node.history + ">";
+            grid[i][j + 1].visited = false;
+            done = false;
+          }
+        }
+        if (!isOob(i - 1, j) && isValid(node.history + "^")) {
+          const up = node.distance + grid[i - 1][j].cost;
+          const current = grid[i - 1][j].distance;
+          if (up < current) {
+            grid[i - 1][j].distance = Math.min(current, up);
+            grid[i - 1][j].history = node.history + "^";
+            grid[i - 1][j].visited = false;
+            done = false;
+          }
+        }
+        if (!isOob(i, j - 1) && isValid(node.history + "<")) {
+          const left = node.distance + grid[i][j - 1].cost;
+          const current = grid[i][j - 1].distance;
+          if (left < current) {
+            grid[i][j - 1].distance = Math.min(current, left);
+            grid[i][j - 1].history = node.history + "<";
+            grid[i][j - 1].visited = false;
+            done = false;
+          }
+        }
+        if (!isOob(i + 1, j) && isValid(node.history + "v")) {
+          const down = node.distance + grid[i + 1][j].cost;
+          const current = grid[i + 1][j].distance;
+          if (down < current) {
+            grid[i + 1][j].distance = Math.min(current, down);
+            grid[i + 1][j].history = node.history + "v";
+            grid[i + 1][j].visited = false;
+            done = false;
+          }
+        }
+      }
+    }
+  }
+  console.log(grid);
 };
 
-console.log(INPUT);
-console.log(
-  computeCost(0, 0, { directions: [], costs: [], positions: [[0, 0]] }, {}),
-);
+part1();
