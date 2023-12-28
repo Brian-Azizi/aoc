@@ -42,30 +42,18 @@ function isOob(i: number, j: number) {
   return i < 0 || j < 0 || i >= N || j >= M;
 }
 
-export const getHistKey =
-  (simple: boolean) =>
-  (hist: Direction[]): string => {
-    const l = hist.length;
-    const lastMove = hist[l - 1];
-    if (!lastMove) return "*";
-    const b = hist[l - 2];
-    const bb = hist[l - 3];
-    const bbb = hist[l - 4];
-    const bbbb = hist[l - 5];
-
-    if (lastMove !== b) {
-      if (simple || lastMove !== FORBIDDEN_MOVE[bb]) return lastMove;
-      else return bb + lastMove;
-    } else if (lastMove !== bb) {
-      if (simple || lastMove !== FORBIDDEN_MOVE[bbb])
-        return lastMove + lastMove;
-      else return bbb + lastMove + lastMove;
-    } else if (lastMove !== bbb) {
-      if (simple || lastMove !== FORBIDDEN_MOVE[bbbb])
-        return lastMove + lastMove + lastMove;
-      else return bbbb + lastMove + lastMove + lastMove;
-    } else {
-      throw new Error("histkey");
+const nextCoord =
+  (dir: Direction) =>
+  ([i, j]: [number, number]) => {
+    switch (dir) {
+      case "<":
+        return [i, j - 1];
+      case ">":
+        return [i, j + 1];
+      case "^":
+        return [i - 1, j];
+      case "v":
+        return [i + 1, j];
     }
   };
 
@@ -88,57 +76,118 @@ const part1 = () => {
   grid[0][0].visited = true;
   let done = false;
 
+  function update(node: {
+    i: number;
+    j: number;
+    newHistory: string;
+    currentHistory: string;
+    newDistance: number;
+    currentDistance: number;
+  }) {
+    grid[node.i][node.j].distance = node.newDistance;
+    grid[node.i][node.j].history = node.newHistory;
+    grid[node.i][node.j].visited = false;
+    done = false;
+  }
+
+  const checkNext = (direction: Direction) => (i: number, j: number) => {
+    const node = grid[i][j];
+    const [n, nn, nnn] = getNext(direction)(i, j, node.history, node.distance);
+    // console.log([i, j], n, nn, nnn);
+
+    if (nnn) {
+      if (nnn.newDistance < nnn.currentDistance) {
+        update(nnn);
+        update(nn);
+        update(n);
+      } else return;
+    } else if (nn) {
+      if (nn.newDistance < nn.currentDistance) {
+        update(nn);
+        update(n);
+      } else return;
+    } else if (n) {
+      if (n.newDistance < n.currentDistance) {
+        update(n);
+      } else return;
+    }
+  };
+
+  const getNext =
+    (direction: Direction) =>
+    (
+      i: number,
+      j: number,
+      hist: string,
+      dist: number,
+    ): {
+      i: number;
+      j: number;
+      newHistory: string;
+      currentHistory: string;
+      newDistance: number;
+      currentDistance: number;
+    }[] => {
+      const [newI, newJ] = nextCoord(direction)([i, j]);
+      if (isOob(newI, newJ)) {
+        return [];
+      }
+
+      const neighbour = grid[newI][newJ];
+      const currentDistance = neighbour.distance;
+      const newDistance = dist + neighbour.cost;
+      const newHist = hist + direction;
+
+      if (!isValid(newHist)) {
+        return [
+          {
+            i: newI,
+            j: newJ,
+            newDistance: Infinity,
+            currentDistance,
+            currentHistory: neighbour.history,
+            newHistory: newHist,
+          },
+        ];
+      }
+
+      const nextNeighbours = getNext(direction)(
+        newI,
+        newJ,
+        newHist,
+        newDistance,
+      );
+
+      return [
+        {
+          i: newI,
+          j: newJ,
+          newDistance,
+          currentDistance,
+          currentHistory: neighbour.history,
+          newHistory: newHist,
+        },
+        ...nextNeighbours,
+      ];
+    };
+
+  let iters = 0;
   while (!done) {
+    iters++;
     done = true;
     for (let i = 0; i < N; i++) {
       for (let j = 0; j < M; j++) {
-        const node = grid[i][j];
-        node.visited = true;
+        grid[i][j].visited = true;
 
-        if (!isOob(i, j + 1) && isValid(node.history + ">")) {
-          const right = node.distance + grid[i][j + 1].cost;
-          const current = grid[i][j + 1].distance;
-          if (right < current) {
-            grid[i][j + 1].distance = Math.min(grid[i][j + 1].distance, right);
-            grid[i][j + 1].history = node.history + ">";
-            grid[i][j + 1].visited = false;
-            done = false;
-          }
-        }
-        if (!isOob(i - 1, j) && isValid(node.history + "^")) {
-          const up = node.distance + grid[i - 1][j].cost;
-          const current = grid[i - 1][j].distance;
-          if (up < current) {
-            grid[i - 1][j].distance = Math.min(current, up);
-            grid[i - 1][j].history = node.history + "^";
-            grid[i - 1][j].visited = false;
-            done = false;
-          }
-        }
-        if (!isOob(i, j - 1) && isValid(node.history + "<")) {
-          const left = node.distance + grid[i][j - 1].cost;
-          const current = grid[i][j - 1].distance;
-          if (left < current) {
-            grid[i][j - 1].distance = Math.min(current, left);
-            grid[i][j - 1].history = node.history + "<";
-            grid[i][j - 1].visited = false;
-            done = false;
-          }
-        }
-        if (!isOob(i + 1, j) && isValid(node.history + "v")) {
-          const down = node.distance + grid[i + 1][j].cost;
-          const current = grid[i + 1][j].distance;
-          if (down < current) {
-            grid[i + 1][j].distance = Math.min(current, down);
-            grid[i + 1][j].history = node.history + "v";
-            grid[i + 1][j].visited = false;
-            done = false;
-          }
-        }
+        checkNext("^")(i, j);
+        checkNext("<")(i, j);
+        checkNext(">")(i, j);
+        checkNext("v")(i, j);
       }
     }
   }
   console.log(grid);
+  console.log(iters);
 };
 
 part1();
