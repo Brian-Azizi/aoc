@@ -1,85 +1,148 @@
-import { input17, medium17, small17, test17 } from "./input-17";
-import { getDimensions, sum, toInt, transpose } from "../utils";
+import { input17, test17 } from "./input-17";
+import { toInt } from "../utils";
 
 const INPUT = input17;
 // const INPUT = test17;
-// const INPUT = small17;
-// const INPUT = medium17;
 
-const GRID = INPUT.trim()
-  .split("\n")
-  .map((row) =>
-    row
+type Node = { dir: "v" | "h"; i: number; j: number };
+const node = (dir: "v" | "h", i: number, j: number): Node => ({ dir, i, j });
+
+class Graph {
+  private readonly maxMoves: number;
+  private readonly minMoves: number;
+  private readonly GRID: number[][];
+  constructor(input: string, minMoves: number, maxMoves: number) {
+    this.minMoves = minMoves;
+    this.maxMoves = maxMoves;
+    this.GRID = input
       .trim()
-      .split("")
-      .map((cost) => toInt(cost)),
-  );
+      .split("\n")
+      .map((row) =>
+        row
+          .trim()
+          .split("")
+          .map((cost) => toInt(cost)),
+      );
+  }
+  get M() {
+    return this.GRID[0].length;
+  }
+  get N() {
+    return this.GRID.length;
+  }
+  private isOob(i: number, j: number): boolean {
+    return i < 0 || i >= this.N || j < 0 || j >= this.M;
+  }
 
-const input = GRID;
+  public neighbours(node: Node): Node[] {
+    const { dir, i, j } = node;
+    let result: Node[] = [];
+    for (let k = this.minMoves; k <= this.maxMoves; k++) {
+      if (dir === "v") {
+        !this.isOob(i, j + k) && result.push({ dir: "h", i: i, j: j + k });
+        !this.isOob(i, j - k) && result.push({ dir: "h", i: i, j: j - k });
+      } else {
+        !this.isOob(i + k, j) && result.push({ dir: "v", i: i + k, j: j });
+        !this.isOob(i - k, j) && result.push({ dir: "v", i: i - k, j: j });
+      }
+    }
+    return result;
+  }
+  public cost(a: Node, b: Node): number {
+    if (a.dir === b.dir) throw new Error("A");
+    if (a.dir === "v") if (a.i !== b.i) throw new Error("B");
+    if (a.dir === "h") if (a.j !== b.j) throw new Error("C");
 
-const rows = input.length;
-const columns = input[0].length;
-type Neighbour = Record<string, number>;
-const graph: Record<string, { heat: number; neighbors: Neighbour }> = {};
-let result = Infinity;
+    const index = a.dir === "v" ? "j" : "i";
+    const steps = a.dir === "v" ? b.j - a.j : b.i - a.i;
+    const sign = steps > 0 ? 1 : -1;
 
-for (let y = 0; y < rows; y++) {
-  for (let x = 0; x < columns; x++) {
-    const vertical: { heat: number; neighbors: Neighbour } = (graph[
-      `vertical(${x},${y})`
-    ] = {
-      heat: Infinity,
-      neighbors: {},
-    });
-    const horizontal: { heat: number; neighbors: Neighbour } = (graph[
-      `horizontal(${x},${y})`
-    ] = {
-      heat: Infinity,
-      neighbors: {},
-    });
-    for (/* PART 1 */ let i = 0; i <= 3; i++) {
-      // for /* PART 2 */ (let i = 4; i <= 10; i++) {
-      if (y + i >= 0 && y + i < rows)
-        vertical.neighbors[`horizontal(${x},${y + i})`] = Array(i)
-          .fill(0)
-          .reduce((a, _, j) => a + input[y + j + 1][x], 0);
-      if (y - i >= 0 && y - i < rows)
-        vertical.neighbors[`horizontal(${x},${y - i})`] = Array(i)
-          .fill(0)
-          .reduce((a, _, j) => a + input[y - j - 1][x], 0);
-      if (x + i >= 0 && x + i < columns)
-        horizontal.neighbors[`vertical(${x + i},${y})`] = Array(i)
-          .fill(0)
-          .reduce((a, _, j) => a + input[y][x + j + 1], 0);
-      if (x - i >= 0 && x - i < columns)
-        horizontal.neighbors[`vertical(${x - i},${y})`] = Array(i)
-          .fill(0)
-          .reduce((a, _, j) => a + input[y][x - j - 1], 0);
+    let result = 0;
+    for (let k = 1; k <= Math.abs(steps); k++) {
+      const [deltaI, deltaJ] = index === "j" ? [0, k * sign] : [k * sign, 0];
+      result += this.GRID[a.i + deltaI][a.j + deltaJ];
+    }
+    return result;
+  }
+
+  get LAST() {
+    return { i: this.N - 1, j: this.M - 1 };
+  }
+}
+
+class PriorityQueue<T> {
+  private data: Record<number, T[]>;
+  private size: number;
+  private currentPriority: number | null;
+  constructor() {
+    this.data = {};
+    this.size = 0;
+    this.currentPriority = null;
+  }
+
+  public put(element: T, priority: number): void {
+    if (this.data[priority]) this.data[priority].push(element);
+    else this.data[priority] = [element];
+
+    this.size++;
+    if (this.currentPriority === null || priority < this.currentPriority) {
+      this.currentPriority = priority;
     }
   }
+
+  public get(): T | null {
+    if (this.empty() || this.currentPriority === null) return null;
+    const result = this.data[this.currentPriority].pop();
+    if (this.data[this.currentPriority].length === 0) {
+      delete this.data[this.currentPriority];
+      const nextPriority = toInt(Object.keys(this.data).sort()[0]);
+      this.currentPriority = isNaN(nextPriority) ? null : nextPriority;
+    }
+    this.size--;
+    return result!;
+  }
+
+  public empty(): boolean {
+    return this.size === 0;
+  }
 }
 
-const startingNeighbors = {
-  ...graph["horizontal(0,0)"].neighbors,
-  ...graph["vertical(0,0)"].neighbors,
+const toStr = (node: Node): string => `${node.dir}(${node.i},${node.j})`;
+
+const runSearch = (min: number, max: number) => {
+  const graph = new Graph(INPUT, min, max);
+  const frontier = new PriorityQueue<Node>();
+  frontier.put(node("v", 0, 0), 0);
+  frontier.put(node("h", 0, 0), 0);
+  const cameFrom: Record<string, Node> = {};
+  const costSoFar: Record<string, number> = {
+    [toStr(node("v", 0, 0))]: 0,
+    [toStr(node("h", 0, 0))]: 0,
+  };
+
+  while (!frontier.empty()) {
+    const current = frontier.get()!;
+    for (const next of graph.neighbours(current)) {
+      const newCost = costSoFar[toStr(current)] + graph.cost(current, next);
+
+      if (!(toStr(next) in costSoFar) || newCost < costSoFar[toStr(next)]) {
+        costSoFar[toStr(next)] = newCost;
+        const priority = newCost;
+        frontier.put(next, priority);
+        cameFrom[toStr(next)] = current;
+      }
+    }
+  }
+
+  const result = Math.min(
+    costSoFar[toStr(node("h", graph.LAST.i, graph.LAST.j))],
+    costSoFar[toStr(node("v", graph.LAST.i, graph.LAST.j))],
+  );
+
+  return result;
 };
-for (const startingNeighbor of Object.keys(startingNeighbors)) {
-  walk(startingNeighbor, startingNeighbors[startingNeighbor]);
-}
 
-function walk(neighbor: string, heat: number) {
-  if (heat >= Math.min(graph[neighbor].heat, result)) return;
-  if (neighbor.split("l")[1] == `(${columns - 1},${rows - 1})`) {
-    result = heat;
-    return;
-  }
-  graph[neighbor].heat = heat;
-  const neighbors = Object.keys(graph[neighbor].neighbors);
-  for (const key of neighbors) {
-    walk(key, heat + graph[neighbor].neighbors[key]);
-  }
-}
+const part1 = runSearch(1, 3);
+const part2 = runSearch(4, 10);
 
-console.log(startingNeighbors);
-console.log(graph);
-console.log(result);
+console.log({ part1, part2 });
