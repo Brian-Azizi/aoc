@@ -1,8 +1,8 @@
-import { input17, test17 } from "./input-17";
+import { test17, input17 } from "./input-17";
 import { toInt } from "../utils";
 
-const INPUT = input17;
-// const INPUT = test17;
+// const INPUT = input17;
+const INPUT = test17;
 
 type Node = { dir: "v" | "h"; i: number; j: number };
 const node = (dir: "v" | "h", i: number, j: number): Node => ({ dir, i, j });
@@ -10,7 +10,7 @@ const node = (dir: "v" | "h", i: number, j: number): Node => ({ dir, i, j });
 class Graph {
   private readonly maxMoves: number;
   private readonly minMoves: number;
-  private readonly GRID: number[][];
+  public readonly GRID: number[][];
   constructor(input: string, minMoves: number, maxMoves: number) {
     this.minMoves = minMoves;
     this.maxMoves = maxMoves;
@@ -134,12 +134,10 @@ const runSearch = (min: number, max: number) => {
     }
   }
 
-  const result = Math.min(
-    costSoFar[toStr(node("h", graph.LAST.i, graph.LAST.j))],
-    costSoFar[toStr(node("v", graph.LAST.i, graph.LAST.j))],
-  );
+  const costH = costSoFar[toStr(node("h", graph.LAST.i, graph.LAST.j))];
+  const costV = costSoFar[toStr(node("v", graph.LAST.i, graph.LAST.j))];
 
-  return result;
+  return Math.min(costH, costV);
 };
 
 const part1 = runSearch(1, 3);
