@@ -65,3 +65,5 @@ export const getDimensions = (input: string | any[][]): [number, number] => {
   }
   return [input.length, input[0].length];
 };
+
+export const ll = (x: any) => console.dir(x, { depth: null });

@@ -1,5 +1,5 @@
 import { input18, test18 } from "./input18";
-import { toInt } from "../utils";
+import { toInt } from "../../utils";
 
 const INPUT = input18;
 // const INPUT = test18;
